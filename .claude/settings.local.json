@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "asana"
+  ],
+  "enableAllProjectMcpServers": true
+}

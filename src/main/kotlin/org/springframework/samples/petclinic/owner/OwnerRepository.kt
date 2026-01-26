@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional
  * @author Michael Isvy
  * @author Antoine Rey
  */
+// 実装は実行時に自動的に生成される
 interface OwnerRepository : Repository<Owner, Int> {
 
     /**
@@ -39,8 +40,21 @@ interface OwnerRepository : Repository<Owner, Int> {
      * @return a Collection of matching {@link Owner}s (or an empty Collection if none
      * found)
      */
+    /**
+     * JPQL エンティティベースのクエリ言語
+     *
+     * SELECT DISTINCT owner              -- 重複を除いてOwnerを取得
+     * FROM Owner owner                   -- Ownerエンティティから（aliasはowner）
+     * left join fetch owner.pets         -- petsを一緒に取得（N+1問題を回避）
+     * WHERE owner.lastName LIKE :lastName% -- lastNameで前方一致検索
+     * :lastName = 名前付きパラメータ
+     * - メソッドの引数lastName: Stringとバインドされる
+     */
     @Query("SELECT DISTINCT owner FROM Owner owner left join fetch owner.pets WHERE owner.lastName LIKE :lastName%")
+    // トランザクション内で実行
+    // readOnly = true : 読み取り専用、更新しない
     @Transactional(readOnly = true)
+    // Collection : リストとかの親インターフェース
     fun findByLastName(lastName: String): Collection<Owner>
 
     /**
@@ -56,5 +70,6 @@ interface OwnerRepository : Repository<Owner, Int> {
      * Save an {@link Owner} to the data store, either inserting or updating it.
      * @param owner the {@link Owner} to save
      */
+    // 実装はSpringData JPAが自動でしてくれている
     fun save(owner: Owner)
 }

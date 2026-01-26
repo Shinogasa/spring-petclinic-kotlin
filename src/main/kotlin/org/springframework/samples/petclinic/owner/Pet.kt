@@ -43,10 +43,14 @@ class Pet : NamedEntity() {
     @JoinColumn(name = "type_id")
     var type: PetType? = null
 
+    // 複数のPetは一つのOwnerに属する
     @ManyToOne
+    // owner_idカラムが外部キー
+    // 外部キー = 小テーブルにおける主キー
     @JoinColumn(name = "owner_id")
     var owner: Owner? = null
 
+    // @Transit: デーベース上に保存されない
     @Transient
     var visits: MutableSet<Visit> = LinkedHashSet()
 

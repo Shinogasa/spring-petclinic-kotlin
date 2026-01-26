@@ -34,6 +34,7 @@ import jakarta.validation.Valid
  * @author Antoine Rey
  */
 @Controller
+// コンストラクタでDI(依存性注入)
 class OwnerController(val owners: OwnerRepository, val visits: VisitRepository) {
 
     val VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm"
