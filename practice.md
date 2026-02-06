@@ -1610,3 +1610,589 @@ class OwnerController(val owners: OwnerRepository) {
 DIは最初は難しく感じますが、**「自分で作らず、外から渡してもらう」**というシンプルな考え方です。
 
 理解できましたか？他に気になる点はありますか？
+
+## コントローラー層について教えて下さい
+
+完璧です！これで全体像が見えました。詳しく解説していきますね。                                                   
+
+  ---                                                                                                              
+📘 Spring MVCコントローラー層の完全解説                                                      |    1
+
+★ Insight ─────────────────────────────────────                                              |    1
+- Spring MVCはModel-View-Controllerパターンを実装
+- コントローラーは「リクエスト→処理→レスポンス」の橋渡し役
+- アノテーションでURLとメソッドを紐付ける宣言的なプログラミング                                                  
+  ─────────────────────────────────────────────────
+
+🎯 1. コントローラーの基本構造
+
+クラスレベルのアノテーション
+
+OwnerController.kt:36-38                                                                                         
+@Controller                                                                                                      
+class OwnerController(val owners: OwnerRepository, val visits: VisitRepository) {
+
+重要なポイント：
+
+@Controller
+
+- このクラスがSpring MVCのコントローラーであることを宣言
+- Springがこのクラスを自動検出してDIコンテナに登録
+- HTTPリクエストを受け取る能力を持つ
+
+コンストラクタでDI
+
+class OwnerController(                                                                                           
+val owners: OwnerRepository,    // ← Ownerのデータアクセス                                                   
+val visits: VisitRepository     // ← 診察記録のデータアクセス                                                
+)
+- 前回学んだDI（依存性注入）の実例
+- Springが自動でリポジトリのインスタンスを注入
+
+  ---                                                                                                              
+🔗 2. リクエストマッピング
+
+GETリクエスト：新規作成フォーム表示
+
+OwnerController.kt:47-52 
+```kotlin
+@GetMapping("/owners/new")                                                                                       
+fun initCreationForm(model: MutableMap<String, Any>): String {                                                   
+    val owner = Owner()                                                                                          
+    model["owner"] = owner                                                                                       
+    return VIEWS_OWNER_CREATE_OR_UPDATE_FORM                                                                     
+}
+```
+
+詳細解説：
+
+@GetMapping("/owners/new")
+- HTTPのGETメソッドで /owners/new にアクセスしたときに実行
+- ユーザーがブラウザで http://localhost:8080/owners/new にアクセスすると呼ばれる
+
+model: MutableMap<String, Any>
+- Model: コントローラーとビュー（HTML）の間でデータを渡すための箱
+- KotlinのMutableMapとして受け取る（変更可能なマップ）
+- model["owner"] = owner でビューにデータを渡す
+
+戻り値：String
+- ビュー名を返す
+- "owners/createOrUpdateOwnerForm" = templates/owners/createOrUpdateOwnerForm.html を表示
+
+処理の流れ：
+
+1. ユーザー: http://localhost:8080/owners/new にアクセス                                                         
+   ↓
+2. Spring: @GetMapping("/owners/new") を見つける                                                                 
+   ↓
+3. initCreationForm() が実行される                                                                               
+   ↓
+4. 空のOwnerオブジェクトを作成                                                                                   
+   ↓
+5. modelに "owner" として格納                                                                                    
+   ↓
+6. "owners/createOrUpdateOwnerForm" を返す                                                                       
+   ↓
+7. Thymeleafが createOrUpdateOwnerForm.html をレンダリング                                                       
+   ↓
+8. ブラウザに表示
+
+  ---                                                                                                              
+POSTリクエスト：フォーム送信処理
+
+OwnerController.kt:54-62  
+```kotlin
+@PostMapping("/owners/new")                                                                                      
+fun processCreationForm(@Valid owner: Owner, result: BindingResult): String {                                    
+    return if (result.hasErrors()) {                                                                             
+        VIEWS_OWNER_CREATE_OR_UPDATE_FORM                                                                        
+    } else {                                                                                                     
+        owners.save(owner)                                                                                       
+        "redirect:/owners/" + owner.id                                                                           
+    }                                                                                                            
+}
+```
+
+詳細解説：
+
+@PostMapping("/owners/new")
+- HTTPのPOSTメソッドで /owners/new にアクセスしたときに実行
+- フォーム送信時に呼ばれる
+
+@Valid owner: Owner
+- フォームデータの自動バインディング
+    - フォームのfirstName, lastNameなどのフィールドが自動的にOwnerオブジェクトにセットされる
+    - 入力値がプロパティに自動変換
+- @Valid: バリデーションを実行
+    - Ownerクラスの@NotEmpty, @Digitsなどのアノテーションをチェック
+    - 違反があれば次のパラメータに渡される
+
+result: BindingResult
+- バリデーション結果を格納
+- result.hasErrors() でエラーの有無を確認
+- エラー内容も取得できる
+
+処理の分岐：                                                                                                     
+return if (result.hasErrors()) {                                                                                 
+VIEWS_OWNER_CREATE_OR_UPDATE_FORM  // エラーあり → フォームを再表示                                          
+} else {                                                                                                         
+owners.save(owner)                  // エラーなし → 保存                                                     
+"redirect:/owners/" + owner.id      // 保存後 → 詳細画面にリダイレクト                                       
+}
+
+redirect: の意味
+
+"redirect:/owners/" + owner.id
+
+- リダイレクト: ブラウザに別のURLへ移動するよう指示
+- redirect: プレフィックスを付けると、Spring MVCがリダイレクトレスポンスを返す
+- 例：owner.id = 123 なら redirect:/owners/123 → ブラウザが /owners/123 に再アクセス
+
+リダイレクト vs フォワードの違い：                                                                               
+┌──────────┬───────────────┬────────────────────┬────────────────────────┐                                       
+│   方式   │ ブラウザのURL │ HTTPリクエスト回数 │         使い所         │                                       
+├──────────┼───────────────┼────────────────────┼────────────────────────┤                                       
+│ redirect │ 変わる        │ 2回                │ POST後（二重送信防止） │                                       
+├──────────┼───────────────┼────────────────────┼────────────────────────┤                                       
+│ forward  │ 変わらない    │ 1回                │ 単なる画面遷移         │                                       
+└──────────┴───────────────┴────────────────────┴────────────────────────┘
+  ---                                                                                                              
+パスパラメータの使用
+
+OwnerController.kt:116-124
+```kotlin
+@GetMapping("/owners/{ownerId}")                                                                                 
+fun showOwner(@PathVariable("ownerId") ownerId: Int, model: Model): String {                                     
+    val owner = this.owners.findById(ownerId)                                                                    
+    for (pet in owner.getPets()) {                                                                               
+        pet.visits = visits.findByPetId(pet.id!!)                                                                
+    }                                                                                                            
+    model.addAttribute(owner)                                                                                    
+    return "owners/ownerDetails"                                                                                 
+}
+```
+詳細解説：
+
+@GetMapping("/owners/{ownerId}")
+- {ownerId} はパスパラメータ（プレースホルダー）
+- /owners/123 にアクセスすると ownerId = 123 になる
+
+@PathVariable("ownerId") ownerId: Int
+- URLの {ownerId} 部分を引数 ownerId にバインド
+- 自動で型変換（String → Int）
+
+処理の流れ：                                                                                                     
+val owner = this.owners.findById(ownerId)  // 1. DBからOwner取得                                                 
+for (pet in owner.getPets()) {             // 2. Ownerのペットを全てループ                                       
+pet.visits = visits.findByPetId(pet.id!!)  // 3. 各ペットの診察記録を取得                                    
+}                                                                                                                
+model.addAttribute(owner)                  // 4. modelにOwnerを追加                                              
+return "owners/ownerDetails"               // 5. 詳細画面を表示
+
+model.addAttribute(owner)
+- model["owner"] = owner と同じ
+- ビューで ${owner} としてアクセス可能
+
+  ---                                                                                                              
+🔍 3. 複雑な検索処理の実例
+
+OwnerController.kt:70-90                                                                                         
+```kotlin
+@GetMapping("/owners")                                                                                           
+fun processFindForm(owner: Owner, result: BindingResult, model: MutableMap<String, Any>): String {               
+    // find owners by last name                                                                                  
+    val results = owners.findByLastName(owner.lastName)                                                          
+    return when {                                                                                                
+        results.isEmpty() -> {                                                                                   
+            // no owners found                                                                                   
+            result.rejectValue("lastName", "notFound", "not found")                                              
+            "owners/findOwners"                                                                                  
+        }                                                                                                        
+        results.size == 1 -> {                                                                                   
+            // 1 owner found                                                                                     
+            "redirect:/owners/" + results.first().id                                                             
+        }                                                                                                        
+        else -> {                                                                                                
+            // multiple owners found                                                                             
+            model["selections"] = results                                                                        
+            "owners/ownersList"                                                                                  
+        }                                                                                                        
+    }                                                                                                            
+}
+```
+★ Insight ─────────────────────────────────────
+- Kotlinのwhen式を使った多分岐処理の実例
+- 検索結果の件数によって異なる画面に遷移する設計パターン
+- result.rejectValue()でフィールドごとのエラーを追加                                                             
+  ─────────────────────────────────────────────────
+
+処理の分岐：
+
+ケース1: 検索結果が0件                                                                                           
+results.isEmpty() -> {                                                                                           
+result.rejectValue("lastName", "notFound", "not found")                                                      
+"owners/findOwners"                                                                                          
+}
+- result.rejectValue(): フィールド別のエラーを追加
+    - 第1引数: エラーのあるフィールド名（lastName）
+    - 第2引数: エラーコード（国際化に使用）
+    - 第3引数: デフォルトメッセージ
+- 検索フォームを再表示（エラーメッセージ付き）
+
+ケース2: 検索結果が1件                                                                                           
+results.size == 1 -> {                                                                                           
+"redirect:/owners/" + results.first().id                                                                     
+}
+- results.first(): コレクションの最初の要素を取得
+- その飼い主の詳細画面に直接リダイレクト
+
+ケース3: 検索結果が複数件                                                                                        
+else -> {                                                                                                        
+model["selections"] = results                                                                                
+"owners/ownersList"                                                                                          
+}
+- 検索結果をmodelに格納
+- 一覧画面を表示（ユーザーに選択させる）
+
+  ---                                                                                                              
+🛠️ 4. 更新処理
+
+OwnerController.kt:92-108                                                                                        
+@GetMapping("/owners/{ownerId}/edit")                                                                            
+fun initUpdateOwnerForm(@PathVariable("ownerId") ownerId: Int, model: Model): String {                           
+val owner = owners.findById(ownerId)                                                                         
+model.addAttribute(owner)                                                                                    
+return VIEWS_OWNER_CREATE_OR_UPDATE_FORM                                                                     
+}
+
+@PostMapping("/owners/{ownerId}/edit")                                                                           
+fun processUpdateOwnerForm(@Valid owner: Owner, result: BindingResult, @PathVariable("ownerId") ownerId: Int):   
+String {                                                                                                         
+return if (result.hasErrors()) {                                                                             
+VIEWS_OWNER_CREATE_OR_UPDATE_FORM                                                                        
+} else {                                                                                                     
+owner.id = ownerId  // ← 重要！                                                                          
+this.owners.save(owner)                                                                                  
+"redirect:/owners/{ownerId}"                                                                             
+}                                                                                                            
+}
+
+重要なポイント：
+
+GETメソッド（編集フォーム表示）
+1. DBから既存データを取得
+2. modelに格納
+3. フォームを表示（フィールドに既存値が入る）
+
+POSTメソッド（更新処理）                                                                                         
+owner.id = ownerId  // ← これが超重要！
+
+なぜこれが必要？
+- フォームから送られてくるデータにはidが含まれていない（セキュリティのため）
+- @InitBinderでidフィールドをブロックしている（後述）
+- URLの{ownerId}からidを取得して明示的にセット
+- これにより、INSERT（新規）ではなくUPDATE（更新）になる
+
+  ---                                                                                                              
+🔒 5. セキュリティ：InitBinder
+
+OwnerController.kt:42-45                                                                                         
+@InitBinder                                                                                                      
+fun setAllowedFields(dataBinder: WebDataBinder) {                                                                
+dataBinder.setDisallowedFields("id")                                                                         
+}
+
+詳細解説：
+
+@InitBinder
+- データバインディングの前に実行される
+- すべてのリクエストメソッドの前に自動で呼ばれる
+
+setDisallowedFields("id")
+- idフィールドをバインディング対象から除外
+- フォームから送られてきたidの値を無視する
+
+なぜ必要？
+
+悪意あるリクエスト：                                                                                             
+POST /owners/123/edit                                                                                            
+firstName=John&lastName=Doe&id=999  ← 勝手にIDを書き換えようとする攻撃
+
+idをブロックすることで、
+- URLの{ownerId}だけが信頼できるidの情報源
+- 攻撃者が別のユーザーのデータを書き換えることを防ぐ
+
+  ---                                                                                                              
+🎨 6. ビュー（Thymeleaf）との連携
+
+フォームのバインディング
+
+createOrUpdateOwnerForm.html:7
+  <form th:object="${owner}" class="form-horizontal" id="add-owner-form" method="post">                            
+
+th:object="${owner}"
+- フォーム全体がこのオブジェクトにバインドされる
+- ${owner} はコントローラーから渡されたmodel["owner"]
+
+input要素の自動バインディング：                                                                                  
+<input th:replace="~{fragments/inputField :: input ('First Name', 'firstName', 'text')}" />
+- 'firstName' がOwnerのfirstNameプロパティにバインド
+- フォーム送信時、自動的にowner.firstNameにセットされる
+
+条件分岐
+
+createOrUpdateOwnerForm.html:23-24                                                                               
+<button th:with="text=${owner['new']} ? 'Add Owner' : 'Update Owner'"                                            
+class="btn btn-primary" type="submit" th:text="${text}">
+
+- ${owner['new']} = owner.isNew プロパティ
+- 新規なら「Add Owner」、既存なら「Update Owner」を表示
+- Kotlin側のisNewプロパティ（id == null）がビューで使える
+
+データの表示
+
+ownerDetails.html:12-29
+  <table class="table table-striped" th:object="${owner}">                                                         
+      <tr>                                                                                                         
+          <th>Name</th>                                                                                            
+          <td><b th:text="*{firstName + ' ' + lastName}"></b></td>                                                 
+      </tr>                                                                                                        
+      <tr>                                                                                                         
+          <th>Address</th>                                                                                         
+          <td th:text="*{address}"></td>                                                                           
+      </tr>                                                                                                        
+      <!-- ... -->                                                                                                 
+  </table>                                                                                                         
+
+*{firstName}
+- *{} = th:objectで指定したオブジェクトのプロパティ
+- *{firstName} = ${owner.firstName} と同じ
+
+ループ処理
+
+ownerDetails.html:43
+  <tr th:each="pet : ${owner.pets}">                                                                               
+  - th:each: Thymeleafのループ構文                                                                                 
+  - ${owner.pets} の各要素を pet として反復処理                                                                    
+  - OwnerクラスのgetPets()メソッドが呼ばれる                                                                       
+                                                                                                                   
+---                                                                                                              
+🌟 7. PetControllerの高度なテクニック
+
+クラスレベルのRequestMapping
+
+PetController.kt:34-36                                                                                           
+@Controller                                                                                                      
+@RequestMapping("/owners/{ownerId}")                                                                             
+class PetController(val pets: PetRepository, val owners: OwnerRepository) {
+
+@RequestMapping("/owners/{ownerId}")
+- クラス全体に共通のベースURLを定義
+- このクラスの全メソッドのURLが /owners/{ownerId}/... で始まる
+
+メソッドのマッピング例：                                                                                         
+@GetMapping("/pets/new")                                                                                         
+// → 実際のURL: /owners/{ownerId}/pets/new
+
+@PostMapping("/pets/{petId}/edit")                                                                               
+// → 実際のURL: /owners/{ownerId}/pets/{petId}/edit
+                                                                                                                   
+---                                                                                                              
+ModelAttribute：共通データの自動セット
+
+PetController.kt:40-45                                                                                           
+@ModelAttribute("types")                                                                                         
+fun populatePetTypes(): Collection<PetType> = this.pets.findPetTypes()
+
+@ModelAttribute("owner")                                                                                         
+fun findOwner(@PathVariable("ownerId") ownerId: Int): Owner                                                      
+= owners.findById(ownerId)
+
+詳細解説：
+
+@ModelAttribute
+- このコントローラーのすべてのリクエスト処理メソッドの前に自動実行
+- 戻り値が自動的にmodelに追加される
+
+使い所：                                                                                                         
+@ModelAttribute("types")                                                                                         
+fun populatePetTypes(): Collection<PetType> = this.pets.findPetTypes()
+- すべてのリクエストでmodel["types"] = ペットタイプ一覧 が自動セット
+- ペット登録/編集フォームで種類（犬、猫など）のドロップダウンを表示する際に使用
+
+@ModelAttribute("owner")                                                                                         
+fun findOwner(@PathVariable("ownerId") ownerId: Int): Owner                                                      
+= owners.findById(ownerId)
+- URLの{ownerId}から自動的にOwnerを取得
+- すべてのメソッドでownerパラメータが自動注入される
+
+実際の使用例：
+
+PetController.kt:57-63                                                                                           
+@GetMapping("/pets/new")                                                                                         
+fun initCreationForm(owner: Owner, model: Model): String {                                                       
+//                 ↑ @ModelAttributeで自動注入される！                                                       
+val pet = Pet()                                                                                              
+owner.addPet(pet)                                                                                            
+model["pet"] = pet                                                                                           
+return VIEWS_PETS_CREATE_OR_UPDATE_FORM                                                                      
+}
+
+- owner: Owner パラメータは@ModelAttribute("owner")で自動セット
+- メソッドごとにowners.findById(ownerId)を書く必要がない
+
+  ---                                                                                                              
+カスタムバリデータ
+
+PetController.kt:52-55                                                                                           
+@InitBinder("pet")                                                                                               
+fun initPetBinder(dataBinder: WebDataBinder) {                                                                   
+dataBinder.validator = PetValidator()                                                                        
+}
+
+- @InitBinder("pet"): petパラメータ専用のバインダー設定
+- PetValidator()をセット（カスタムバリデーション）
+
+実際のバリデーション：
+
+PetController.kt:66-69                                                                                           
+@PostMapping("/pets/new")                                                                                        
+fun processCreationForm(owner: Owner, @Valid pet: Pet, result: BindingResult, model: Model): String {            
+if (StringUtils.hasLength(pet.name) && pet.isNew && owner.getPet(pet.name!!, true) != null) {                
+result.rejectValue("name", "duplicate", "already exists")                                                
+}                                                                                                            
+// ...                                                                                                       
+}
+
+- ビジネスルール: 同じ飼い主が同じ名前のペットを複数登録できない
+- owner.getPet(pet.name!!, true): 既存ペットの中に同じ名前があるか確認
+- あればエラーを追加
+
+  ---                                                                                                              
+📊 8. リクエストの全体フロー
+
+例：新規Owner作成
+
+【1. フォーム表示】                                                                                              
+ブラウザ: GET /owners/new                                                                                        
+↓                                                                                                             
+Spring: @GetMapping("/owners/new") を探す                                                                        
+↓                                                                                                             
+OwnerController.initCreationForm() 実行                                                                          
+↓                                                                                                             
+model["owner"] = Owner()  // 空のOwner                                                                           
+↓                                                                                                             
+return "owners/createOrUpdateOwnerForm"                                                                          
+↓                                                                                                             
+Thymeleaf: createOrUpdateOwnerForm.html をレンダリング                                                           
+↓                                                                                                             
+ブラウザ: フォーム表示
+
+
+【2. フォーム送信】                                                                                              
+ブラウザ: POST /owners/new                                                                                       
+firstName=John&lastName=Doe&address=123 Main St&...                                                    
+↓                                                                                                             
+Spring: @PostMapping("/owners/new") を探す                                                                       
+↓                                                                                                             
+@InitBinder実行（idをブロック）                                                                                  
+↓                                                                                                             
+フォームデータを自動バインディング                                                                               
+owner.firstName = "John"                                                                                      
+owner.lastName = "Doe"                                                                                        
+...                                                                                                           
+↓                                                                                                             
+@Valid でバリデーション実行                                                                                      
+↓                                                                                                             
+OwnerController.processCreationForm(@Valid owner, result) 実行                                                   
+↓                                                                                                             
+result.hasErrors() でエラーチェック                                                                              
+↓                                                                                                             
+【エラーあり】                 【エラーなし】                                                                    
+return "owners/..."            owners.save(owner)                                                                
+（フォーム再表示）              return "redirect:/owners/123"                                                    
+↓                                                                           
+ブラウザ: GET /owners/123 に再アクセス                                            
+↓                                                                           
+@GetMapping("/owners/{ownerId}") 実行                                             
+↓                                                                           
+詳細画面表示
+                                                                                                                   
+---                                                                                                              
+🎯 9. 重要な概念まとめ
+
+Modelとは                                                                                                        
+┌────────────────┬─────────────────────────┐                                                                     
+│      役割      │          説明           │                                                                     
+├────────────────┼─────────────────────────┤                                                                     
+│ データ受け渡し │ コントローラー → ビュー │                                                                     
+├────────────────┼─────────────────────────┤                                                                     
+│ 実体           │ Map<String, Object>     │                                                                     
+├────────────────┼─────────────────────────┤                                                                     
+│ 使い方         │ model["key"] = value    │                                                                     
+├────────────────┼─────────────────────────┤                                                                     
+│ ビューでの参照 │ ${key}                  │                                                                     
+└────────────────┴─────────────────────────┘                                                                     
+アノテーションの役割                                                                                             
+┌─────────────────┬────────────────────────────────────────┐                                                     
+│ アノテーション  │                  役割                  │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @Controller     │ Spring MVCコントローラーとして登録     │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @GetMapping     │ HTTPのGETリクエストをマッピング        │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @PostMapping    │ HTTPのPOSTリクエストをマッピング       │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @PathVariable   │ URLパスの変数を引数にバインド          │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @Valid          │ バリデーションを実行                   │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @InitBinder     │ データバインディングをカスタマイズ     │                                                     
+├─────────────────┼────────────────────────────────────────┤                                                     
+│ @ModelAttribute │ すべてのリクエストで実行される共通処理 │                                                     
+└─────────────────┴────────────────────────────────────────┘                                                     
+バリデーションの流れ
+
+1. @Valid でバリデーション実行                                                                                   
+   ↓
+2. エンティティのアノテーションをチェック
+    - @NotEmpty
+    - @Digits
+    - @Size など                                                                                                  
+      ↓
+3. カスタムバリデータ実行（@InitBinderで設定した場合）                                                           
+   ↓
+4. 結果をBindingResultに格納                                                                                     
+   ↓
+5. result.hasErrors() でチェック                                                                                 
+   ↓                                                                                                             
+   【エラーあり】              【エラーなし】                                                                       
+   フォーム再表示              処理続行
+
+  ---                                                                                                              
+💡 10. 学習のチェックポイント
+
+以下が理解できたか確認してください：
+
+- @Controllerの役割
+- @GetMappingと@PostMappingの違い
+- Modelを使ったデータの受け渡し
+- @PathVariableでのURLパラメータ取得
+- @ValidとBindingResultによるバリデーション
+- redirect: vs フォワード
+- @InitBinderによるセキュリティ対策
+- @ModelAttributeによる共通処理
+- ThymeleafでのデータバインディングとThere表示
+- リクエストからレスポンスまでの全体フロー
+
+  ---                                                                                                              
+🚀 次のステップの提案
+
+コントローラーを理解したので、次は：
+
+1. バリデーションの詳細 - カスタムバリデータの作り方
+2. 例外ハンドリング - エラー画面の表示方法
+3. セッションとCookie - ログイン機能の実装
+4. RESTful API - JSONを返すコントローラー
+
+どれに興味がありますか？それとも、今学んだコントローラーについて質問がありますか？                               

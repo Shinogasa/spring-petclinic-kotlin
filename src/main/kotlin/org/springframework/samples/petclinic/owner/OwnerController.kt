@@ -37,6 +37,7 @@ import jakarta.validation.Valid
 // コンストラクタでDI(依存性注入)
 class OwnerController(val owners: OwnerRepository, val visits: VisitRepository) {
 
+    // resources/templates/owners/createOrUpdateOwnerForm.html を返す
     val VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm"
 
     @InitBinder
@@ -44,26 +45,35 @@ class OwnerController(val owners: OwnerRepository, val visits: VisitRepository) 
         dataBinder.setDisallowedFields("id")
     }
 
+    // localhost:8080/owners/new に来たときに呼ばれる
     @GetMapping("/owners/new")
     fun initCreationForm(model: MutableMap<String, Any>): String {
         val owner = Owner()
+        // ビューにデータを渡す
         model["owner"] = owner
         return VIEWS_OWNER_CREATE_OR_UPDATE_FORM
     }
 
     @PostMapping("/owners/new")
+    /**
+     * owner: Owner フォームデータを自動バインディング、入力値がプロパティに自動変換
+     * @Valid: バリデーション
+     * result: BindingResult バリデーション結果を格納
+     */
+
     fun processCreationForm(@Valid owner: Owner, result: BindingResult): String {
         return if (result.hasErrors()) {
             VIEWS_OWNER_CREATE_OR_UPDATE_FORM
         } else {
             owners.save(owner)
+            // redirect: このプレフィックスでリダイレクトレスポンスを返す
             "redirect:/owners/" + owner.id
         }
     }
 
     @GetMapping("/owners/find")
     fun initFindForm(model: MutableMap<String, Any>): String {
-        model["owner"] = Owner()
+    model["owner"] = Owner()
         return "owners/findOwners"
     }
 
@@ -114,6 +124,7 @@ class OwnerController(val owners: OwnerRepository, val visits: VisitRepository) 
      * @return the view
      */
     @GetMapping("/owners/{ownerId}")
+    // PathVariable: URLの {ownerId} 部分を引数 ownerId にバインド
     fun showOwner(@PathVariable("ownerId") ownerId: Int, model: Model): String {
         val owner = this.owners.findById(ownerId)
         for (pet in owner.getPets()) {
