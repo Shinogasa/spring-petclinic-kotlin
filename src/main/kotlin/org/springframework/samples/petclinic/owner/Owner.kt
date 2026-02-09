@@ -47,11 +47,17 @@ class Owner : Person() {
     @Digits(fraction = 0, integer = 10)
     var telephone = ""
 
+    // 1対多の関係を定義 Ownerが親、Petが子
+    // cascade = [CascadeType.ALL] : Ownerが保存・削除されるときにPetも連動して保存・削除される
+    // mappedBy = "owner" : Petエンティティのownerプロパティがこの関係の所有者
     @OneToMany(cascade = [CascadeType.ALL], mappedBy = "owner")
+    // MutableSetは変更可能なSetコレクション
+    // HashSetで初期化、順序は保証されない
     var pets: MutableSet<Pet> = HashSet()
 
 
     fun getPets(): List<Pet> =
+            // sortedWith : コレクションを特定の基準でソートし、新しいリストを返す、もとのpetsは変更しない
             pets.sortedWith(compareBy({ it.name }))
 
 
@@ -68,6 +74,7 @@ class Owner : Person() {
      * @param name to test
      * @return true if owner name is already in use
      */
+    // 引数2つのgetPetメソッドのオーバーロード
     fun getPet(name: String): Pet? =
             getPet(name, false)
 
@@ -77,8 +84,13 @@ class Owner : Person() {
      * @param name to test
      * @return true if owner name is already in use
      */
+    // メソッドのオーバーロード
     fun getPet(name: String, ignoreNew: Boolean): Pet? {
+        // 小文字に変換、大文字小文字を区別しないで検索
         val lname = name.lowercase()
+        // var pets: MutableSet<Pet> = HashSet() のpets
+        // this.pets
+        // Ownerの識別はBaseEntityから継承しているidで行える
         for (pet in pets) {
             if (!ignoreNew || !pet.isNew) {
                 val compName = pet.name?.lowercase()
@@ -89,5 +101,13 @@ class Owner : Person() {
         }
         return null
     }
+
+    /**
+     * fun getPet(name: String, ignoreNew: Boolean = false): Pet? =
+     *       pets.firstOrNull { pet ->
+     *           (!ignoreNew || !pet.isNew) &&
+     *           pet.name?.lowercase() == name.lowercase()
+     *       }
+     */
 
 }
