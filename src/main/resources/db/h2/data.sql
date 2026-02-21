@@ -51,3 +51,14 @@ INSERT INTO visits VALUES (default, 7, '2013-01-01', 'rabies shot');
 INSERT INTO visits VALUES (default, 8, '2013-01-02', 'rabies shot');
 INSERT INTO visits VALUES (default, 8, '2013-01-03', 'neutered');
 INSERT INTO visits VALUES (default, 7, '2013-01-04', 'spayed');
+
+INSERT INTO drink_types VALUES (default, '日本酒');
+INSERT INTO drink_types VALUES (default, 'ビール');
+INSERT INTO drink_types VALUES (default, 'ワイン');
+INSERT INTO drink_types VALUES (default, 'ウイスキー');
+INSERT INTO drink_types VALUES (default, 'カクテル');
+INSERT INTO drink_types VALUES (default, '焼酎');
+
+INSERT INTO drinks VALUES (default, '獺祭 純米大吟醸', '2026-02-01', 5, '華やかな香りと甘み', 1);
+INSERT INTO drinks VALUES (default, 'サッポロ黒ラベル', '2026-02-10', 4, '爽やかでキレがある', 2);
+INSERT INTO drinks VALUES (default, 'シャトー・マルゴー', '2026-01-20', 5, 'エレガントでバランスが良い', 3);

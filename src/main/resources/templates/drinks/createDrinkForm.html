@@ -1,0 +1,22 @@
+<html xmlns:th="https://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout (~{::body},'drinks')}">
+
+<body>
+
+<h2>Record a Drink</h2>
+<form th:object="${drink}" class="form-horizontal" id="add-drink-form" method="post">
+    <div class="form-group has-feedback">
+        <input th:replace="~{fragments/inputField :: input ('Name', 'name', 'text')}"/>
+        <input th:replace="~{fragments/inputField :: input ('Drink Date', 'drinkDate', 'date')}"/>
+        <div th:replace="~{fragments/selectField :: select ('Type', 'type', ${types})}"/>
+        <input th:replace="~{fragments/inputField :: input ('Rating', 'rating', 'text')}"/>
+        <input th:replace="~{fragments/inputField :: input ('Notes', 'notes', 'text')}"/>
+    </div>
+    <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-primary" type="submit">Save Drink</button>
+        </div>
+    </div>
+</form>
+</body>
+</html>

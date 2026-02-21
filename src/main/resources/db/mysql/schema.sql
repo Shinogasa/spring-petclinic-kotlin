@@ -53,3 +53,20 @@ CREATE TABLE IF NOT EXISTS visits (
   description VARCHAR(255),
   FOREIGN KEY (pet_id) REFERENCES pets(id)
 ) engine=InnoDB;
+
+CREATE TABLE IF NOT EXISTS drink_types (
+  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(80),
+  INDEX(name)
+) engine=InnoDB;
+
+CREATE TABLE IF NOT EXISTS drinks (
+  id INT(4) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  drink_date DATE,
+  rating INT(1),
+  notes VARCHAR(500),
+  type_id INT(4) UNSIGNED NOT NULL,
+  INDEX(drink_date),
+  FOREIGN KEY (type_id) REFERENCES drink_types(id)
+) engine=InnoDB;

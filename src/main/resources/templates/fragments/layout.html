@@ -60,6 +60,11 @@
                     <span>Veterinarians</span>
                 </li>
 
+                <li th:replace="~{::menuItem ('/drinks','drinks','drink records','glass','Drinks')}">
+                    <span class="fa fa-glass" aria-hidden="true"></span>
+                    <span>Drinks</span>
+                </li>
+
                 <li
                         th:replace="~{::menuItem ('/oups','error','trigger a RuntimeException to see how it is handled','exclamation-triangle','Error')}">
                     <span class="fa exclamation-triangle" aria-hidden="true"></span>

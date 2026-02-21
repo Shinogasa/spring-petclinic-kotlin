@@ -51,3 +51,14 @@ INSERT IGNORE INTO visits VALUES (1, 7, '2010-03-04', 'rabies shot');
 INSERT IGNORE INTO visits VALUES (2, 8, '2011-03-04', 'rabies shot');
 INSERT IGNORE INTO visits VALUES (3, 8, '2009-06-04', 'neutered');
 INSERT IGNORE INTO visits VALUES (4, 7, '2008-09-04', 'spayed');
+
+INSERT IGNORE INTO drink_types VALUES (1, '日本酒');
+INSERT IGNORE INTO drink_types VALUES (2, 'ビール');
+INSERT IGNORE INTO drink_types VALUES (3, 'ワイン');
+INSERT IGNORE INTO drink_types VALUES (4, 'ウイスキー');
+INSERT IGNORE INTO drink_types VALUES (5, 'カクテル');
+INSERT IGNORE INTO drink_types VALUES (6, '焼酎');
+
+INSERT IGNORE INTO drinks VALUES (1, '獺祭 純米大吟醸', '2026-02-01', 5, '華やかな香りと甘み', 1);
+INSERT IGNORE INTO drinks VALUES (2, 'サッポロ黒ラベル', '2026-02-10', 4, '爽やかでキレがある', 2);
+INSERT IGNORE INTO drinks VALUES (3, 'シャトー・マルゴー', '2026-01-20', 5, 'エレガントでバランスが良い', 3);
